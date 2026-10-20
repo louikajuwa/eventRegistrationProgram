@@ -22,7 +22,7 @@ class EventController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             $paginator = $this->events->paginate($request->all());
             $paginator->getCollection()->loadCount([
-                'registrations',
+                'registrations' => fn ($q) => $q->active(),
                 'registrations as attended_count' => fn ($q) => $q->where('attended', true),
             ]);
 

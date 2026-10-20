@@ -28,6 +28,12 @@
                         <input class="input" id="phone" name="phone" value="{{ $user->phone }}" placeholder="Optional">
                     </div>
                 </div>
+                <div class="field">
+                    <label class="label" for="profile_current_password">Current password</label>
+                    <input class="input" type="password" id="profile_current_password" name="current_password" autocomplete="current-password" aria-describedby="profile_current_password_help">
+                    <div class="help-text" id="profile_current_password_help">Required to change your email.</div>
+                    <div class="error-text" data-error="current_password"></div>
+                </div>
             </div>
             <div class="modal-footer" style="border-radius:0 0 var(--radius) var(--radius)">
                 <button type="submit" class="btn btn-primary">Save changes</button>
@@ -47,16 +53,16 @@
             <div class="card-pad">
                 <div class="field">
                     <label class="label" for="current_password">Current password</label>
-                    <input class="input" type="password" id="current_password" name="current_password" required>
+                    <input class="input" type="password" id="current_password" name="current_password" autocomplete="current-password" required>
                 </div>
                 <div class="form-grid">
                     <div class="field">
                         <label class="label" for="new_password">New password</label>
-                        <input class="input" type="password" id="new_password" name="password" required>
+                        <input class="input" type="password" id="new_password" name="password" autocomplete="new-password" required>
                     </div>
                     <div class="field">
                         <label class="label" for="password_confirmation">Confirm new password</label>
-                        <input class="input" type="password" id="password_confirmation" name="password_confirmation" required>
+                        <input class="input" type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" required>
                     </div>
                 </div>
             </div>
@@ -71,7 +77,7 @@
 @push('scripts')
 <script>
     $(function () {
-        window.ajaxForm('#profile-form', function () {});
+        window.ajaxForm('#profile-form', function () { $('#profile_current_password').val(''); });
         window.ajaxForm('#password-form', function () { $('#password-form')[0].reset(); });
     });
 </script>

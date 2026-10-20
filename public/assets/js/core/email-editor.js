@@ -3,7 +3,7 @@
 // sent (resources/views/emails/registration-confirmed.blade.php). Substitution mirrors
 // App\Support\EmailTemplateRenderer (plain {key} replace over a fixed whitelist).
 (function ($) {
-  const esc = (s) => $('<div>').text(s == null ? '' : s).html();
+  const esc = window.esc;
   const nl2br = (s) => esc(s).replace(/\r\n|\r|\n/g, '<br>');
 
   function render(tpl, vars) {

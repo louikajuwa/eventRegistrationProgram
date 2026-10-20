@@ -38,7 +38,7 @@ class DashboardController extends Controller
                 ['label' => 'Registrations', 'value' => number_format($registered)],
                 ['label' => 'Attended', 'value' => number_format($attended)],
             ],
-            'recentEvents' => Event::withCount('registrations')->latest('id')->take(6)->get()
+            'recentEvents' => Event::withCount(['registrations' => fn ($q) => $q->active()])->latest('id')->take(6)->get()
                 ->map(fn (Event $e) => [
                     'id' => $e->id,
                     'title' => $e->title,

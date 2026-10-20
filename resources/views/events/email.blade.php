@@ -28,28 +28,28 @@
             {{-- Editor --}}
             <div>
                 <div class="field">
-                    <span class="field-lab">Subject line</span>
-                    <input class="input" id="e-subject" value="{{ $event->email_subject }}"
+                    <label class="field-lab" for="e-subject">Subject line</label>
+                    <input class="input" id="e-subject" name="email_subject" value="{{ $event->email_subject }}"
                            placeholder="You're registered for {event_title} 🎉">
                 </div>
                 <div class="field">
-                    <span class="field-lab">Email body</span>
-                    <textarea class="textarea" id="e-body"
+                    <label class="field-lab" for="e-body">Email body</label>
+                    <textarea class="textarea" id="e-body" name="email_body"
                               style="min-height:240px;font-family:ui-monospace,'Cascadia Code',Consolas,monospace;font-size:.8rem;line-height:1.55"
                               placeholder="Hi {name}, thanks for registering for {event_title}…">{{ $event->email_body }}</textarea>
                 </div>
-                <span class="field-lab">Insert a placeholder</span>
-                <div class="chips" id="e-chips">
+                <span class="field-lab" id="e-chips-lab">Insert a placeholder</span>
+                <div class="chips" id="e-chips" role="group" aria-labelledby="e-chips-lab">
                     @foreach ($placeholders as $ph)
-                        <span class="chip" data-ph="{{ $ph }}">{{ '{'.$ph.'}' }}</span>
+                        <button type="button" class="chip" data-ph="{{ $ph }}">{{ '{'.$ph.'}' }}</button>
                     @endforeach
                 </div>
                 <p class="help-text" style="margin-top:.75rem">Leave both blank to use your organization's default email (Settings).</p>
             </div>
             {{-- Live preview --}}
             <div>
-                <span class="field-lab">Preview</span>
-                <div class="mail-preview" id="e-preview"></div>
+                <span class="field-lab" id="e-preview-lab">Preview</span>
+                <div class="mail-preview" id="e-preview" role="region" aria-labelledby="e-preview-lab"></div>
             </div>
         </div>
     </div>
@@ -69,6 +69,7 @@ $(function () {
         window.http({
             method: 'PUT', url: "{{ route('events.email.update', $event->id) }}",
             data: { email_subject: $('#e-subject').val(), email_body: $('#e-body').val() },
+            form: $('.mail-grid'),
             button: this,
         });
     });

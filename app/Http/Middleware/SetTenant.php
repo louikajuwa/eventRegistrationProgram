@@ -25,6 +25,24 @@ class SetTenant
     {
         $user = $request->user();
 
+        if ($user && $user->is_active === false) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been deactivated.',
+                    'data' => ['redirect' => route('login')],
+                    'errors' => null,
+                ], 401);
+            }
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Your account has been deactivated. Please contact support.']);
+        }
+
         if ($user && $user->organization_id) {
             if (! $user->organization?->is_active) {
                 Auth::guard('web')->logout();

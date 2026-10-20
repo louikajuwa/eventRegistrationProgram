@@ -11,7 +11,7 @@ class EventDashboardController extends Controller
     {
         $this->authorizeTenant($event);
 
-        $registered = $event->registrations()->count();
+        $registered = $event->activeRegistrationsCount();
         $attended = $event->registrations()->where('attended', true)->count();
 
         $recent = $event->registrations()->latest('id')->take(10)->get()

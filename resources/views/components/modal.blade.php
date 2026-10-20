@@ -1,10 +1,10 @@
 @props(['id', 'title' => ''])
 
-<div id="{{ $id }}" class="modal-root hidden" role="dialog" aria-modal="true" aria-hidden="true">
+<div id="{{ $id }}" class="modal-root hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="{{ $id }}-title">
     <div class="modal-overlay"></div>
     <div class="modal-panel">
         <div class="modal-header">
-            <h3 class="font-semibold">{{ $title }}</h3>
+            <h2 class="font-semibold" id="{{ $id }}-title">{{ $title }}</h2>
             <button type="button" class="btn btn-ghost" data-modal-close aria-label="Close">✕</button>
         </div>
         {{ $slot }}

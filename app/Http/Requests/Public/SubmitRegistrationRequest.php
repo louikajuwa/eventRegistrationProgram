@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Public;
 
+use App\Enums\EventStatus;
 use App\Enums\QuestionType;
 use App\Models\Event;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Builds validation rules dynamically from the bound event's questions, so the
@@ -18,11 +20,15 @@ class SubmitRegistrationRequest extends FormRequest
         return true;
     }
 
-    /** Only a published event accepts submissions. */
+    /** Drafts are 404; closed / ended events are a 422 (the service re-checks under lock, incl. capacity). */
     protected function prepareForValidation(): void
     {
         $event = $this->event();
-        abort_unless($event && $event->status->acceptsRegistrations(), 404);
+        abort_if($event === null || $event->status === EventStatus::Draft, 404);
+
+        if (! $event->acceptsRegistrations()) {
+            throw ValidationException::withMessages(['event' => 'Registration is closed for this event.']);
+        }
     }
 
     /**

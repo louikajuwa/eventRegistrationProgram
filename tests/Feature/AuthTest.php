@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -84,5 +85,82 @@ class AuthTest extends TestCase
 
         $this->actingAs($user)->postJson('/logout')->assertOk();
         $this->assertGuest();
+    }
+
+    public function test_deactivated_user_with_active_session_is_logged_out_on_next_request(): void
+    {
+        $user = User::factory()->create(['is_active' => true]);
+        $this->actingAs($user);
+        $user->update(['is_active' => false]);
+
+        $this->getJson('/dashboard')->assertStatus(401);
+        $this->assertGuest();
+    }
+
+    public function test_deactivated_user_is_redirected_to_login_for_web_requests(): void
+    {
+        $user = User::factory()->create(['is_active' => true]);
+        $this->actingAs($user);
+        $user->update(['is_active' => false]);
+
+        $this->get('/dashboard')->assertRedirect('/login');
+        $this->assertGuest();
+    }
+
+    public function test_password_change_requires_correct_current_password(): void
+    {
+        $user = User::factory()->create(['password' => 'password']);
+
+        $this->actingAs($user)->putJson('/profile/password', [
+            'current_password' => 'not-the-password',
+            'password' => 'NewSecret123!',
+            'password_confirmation' => 'NewSecret123!',
+        ])->assertStatus(422)->assertJsonValidationErrors(['current_password']);
+
+        $this->assertTrue(Hash::check('password', $user->fresh()->password));
+    }
+
+    public function test_password_change_succeeds_with_correct_current_password(): void
+    {
+        $user = User::factory()->create(['password' => 'password']);
+
+        $this->actingAs($user)->putJson('/profile/password', [
+            'current_password' => 'password',
+            'password' => 'NewSecret123!',
+            'password_confirmation' => 'NewSecret123!',
+        ])->assertOk();
+
+        $this->assertTrue(Hash::check('NewSecret123!', $user->fresh()->password));
+    }
+
+    public function test_profile_email_change_requires_current_password(): void
+    {
+        $user = User::factory()->create(['email' => 'old@mlm.test', 'password' => 'password']);
+
+        $this->actingAs($user)->putJson('/profile', [
+            'name' => $user->name,
+            'email' => 'new@mlm.test',
+            'current_password' => 'wrong',
+        ])->assertStatus(422)->assertJsonValidationErrors(['current_password']);
+
+        $this->assertSame('old@mlm.test', $user->fresh()->email);
+    }
+
+    public function test_forgot_password_is_throttled(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/forgot-password', ['email' => 'nobody@mlm.test'])->assertStatus(422);
+        }
+
+        $this->postJson('/forgot-password', ['email' => 'nobody@mlm.test'])->assertStatus(429);
+    }
+
+    public function test_register_is_throttled(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/register', [])->assertStatus(422);
+        }
+
+        $this->postJson('/register', [])->assertStatus(429);
     }
 }

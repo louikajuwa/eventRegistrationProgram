@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\RoleName;
 use App\Models\Organization;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -18,6 +19,20 @@ class OrganizationRegistrationService
      * @param  array{company:string,name:string,email:string,password:string}  $data
      */
     public function register(array $data): User
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $this->createOrganizationAndAdmin($data);
+            } catch (UniqueConstraintViolationException $e) {
+                // Slug collision from a concurrent signup: regenerate and retry.
+                if ($attempt >= 3) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    private function createOrganizationAndAdmin(array $data): User
     {
         return DB::transaction(function () use ($data): User {
             $org = Organization::create([

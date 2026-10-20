@@ -42,11 +42,12 @@ class OrganizationController extends Controller
         $events = Event::withoutGlobalScopes()
             ->where('organization_id', $organization->id)
             ->withCount([
-                'registrations',
+                'registrations' => fn ($q) => $q->active(),
                 'registrations as attended_count' => fn ($q) => $q->where('attended', true),
             ])
             ->latest('id')
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
 
         return view('admin.organizations.show', [
             'organization' => $organization,
@@ -74,12 +75,19 @@ class OrganizationController extends Controller
         $registrations = Registration::withoutGlobalScopes()
             ->where('event_id', $event->id)
             ->latest('id')
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
+
+        $totals = [
+            'registered' => Registration::withoutGlobalScopes()->where('event_id', $event->id)->active()->count(),
+            'attended' => Registration::withoutGlobalScopes()->where('event_id', $event->id)->where('attended', true)->count(),
+        ];
 
         return view('admin.organizations.event', [
             'organization' => $organization,
             'event' => $event,
             'registrations' => $registrations,
+            'totals' => $totals,
         ]);
     }
 }

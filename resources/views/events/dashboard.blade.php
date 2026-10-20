@@ -9,7 +9,7 @@
     <a class="btn btn-secondary" href="{{ route('registrations.index', ['event_id' => $event->id]) }}">Registrations</a>
 </x-page-header>
 
-<div class="grid gap-4 mb-6" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<div class="kpi-grid-3 mb-6">
     <div class="card stat">
         <div class="stat-label">Registered <span id="live-dot" class="badge badge-success" style="margin-left:.35rem">● live</span></div>
         <div class="stat-value" id="reg-count">{{ $registered }}</div>
@@ -40,13 +40,10 @@
 <script>
 $(function () {
     const EVENT_ID = {{ $event->id }};
-    const esc = (s) => $('<div>').text(s == null ? '' : s).html();
-    if (!window.io) return;
+    if (!window.Realtime) return;
 
-    $.getJSON('{{ route('realtime.token') }}').done(function (res) {
-        const d = res && res.data;
-        if (!d || !d.token) return;
-        const socket = window.io({ path: '/socket.io/', auth: { token: d.token }, transports: ['websocket', 'polling'] });
+    // Reuse the single shared socket opened by realtime.js (no duplicate connection).
+    window.Realtime.onSocket(function (socket) {
         socket.on('registration.created', function (p) {
             if (!p || p.event_id !== EVENT_ID) return;
             if (typeof p.registered === 'number') $('#reg-count').text(p.registered);
@@ -55,10 +52,6 @@ $(function () {
                 <td>—</td><td class="text-xs" style="font-family:ui-monospace,monospace">${esc(p.reference)}</td><td>just now</td></tr>`);
             window.toast && window.toast('New registration: ' + (p.name || ''), 'success');
         });
-        // Refresh token before it expires.
-        setInterval(function () {
-            $.getJSON('{{ route('realtime.token') }}').done(function (r) { if (r && r.data && r.data.token) socket.auth = { token: r.data.token }; });
-        }, 240000);
     });
 });
 </script>

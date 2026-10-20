@@ -12,8 +12,8 @@
 
 <div class="card fill">
     <div class="card-pad flex flex-wrap items-center gap-3 border-b" style="border-color:var(--border)">
-        <input id="dt-search" class="input" style="max-width:280px" placeholder="Search events…">
-        <select id="dt-status" class="select" style="max-width:160px">
+        <input id="dt-search" class="input" style="max-width:280px" placeholder="Search events…" aria-label="Search events" type="search">
+        <select id="dt-status" class="select" style="max-width:160px" aria-label="Filter by status">
             <option value="">All statuses</option>
             <option value="draft">Draft</option>
             <option value="published">Published</option>
@@ -94,12 +94,11 @@
 <script>
 $(function () {
     const listUrl = "{{ route('events.index') }}";
-    const base = "{{ url('events') }}";
-    const publicBase = "{{ url('e') }}";
-    const esc = (s) => $('<div>').text(s == null ? '' : s).html();
+    const base = {!! json_encode(route("events.index", [], false)) !!};
+    const publicBase = window.location.origin + window.APP.routes.publicEvent.replace("__SLUG__", "");
     const badge = { published: 'success', closed: 'warning', draft: 'neutral' };
     const dtLocal = (iso) => iso ? String(iso).substring(0, 16) : '';
-    const fmt = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const fmt = (iso) => window.formatDate(iso);
 
     const dt = new DataTable({
         url: listUrl, mount: '#dt', defaultSort: 'id', defaultDir: 'desc',
@@ -110,14 +109,14 @@ $(function () {
             <td><span class="badge badge-${badge[e.status] || 'neutral'}">${esc(e.status)}</span></td>
             <td>${fmt(e.starts_at)}</td>
             <td class="num">${e.registrations_count ?? 0}${e.attended_count != null ? ` · ${e.attended_count} in` : ''}</td>
-            <td class="text-right whitespace-nowrap">
+            <td class="text-right"><div class="row-actions">
                 <a class="btn btn-ghost btn-sm" href="${base}/${e.id}/dashboard">Dashboard</a>
                 @can('events.update')<a class="btn btn-ghost btn-sm" href="${base}/${e.id}/questions">Form</a>@endcan
                 @can('events.update')<a class="btn btn-ghost btn-sm" href="${base}/${e.id}/email">Email</a>@endcan
-                <button class="btn btn-ghost btn-sm btn-link" data-id="${e.id}" title="Copy public link">Link</button>
-                @can('events.update')<button class="btn btn-ghost btn-sm btn-edit" data-id="${e.id}">Edit</button>@endcan
-                @can('events.delete')<button class="btn btn-ghost btn-sm btn-del" data-id="${e.id}" style="color:var(--c-danger)">Delete</button>@endcan
-            </td>
+                <button class="btn btn-ghost btn-sm btn-link" data-id="${e.id}" title="Copy public link" aria-label="Copy public link for ${esc(e.title)}">Link</button>
+                @can('events.update')<button class="btn btn-ghost btn-sm btn-edit" data-id="${e.id}" aria-label="Edit ${esc(e.title)}">Edit</button>@endcan
+                @can('events.delete')<button class="btn btn-ghost btn-sm btn-del" data-id="${e.id}" aria-label="Delete ${esc(e.title)}" style="color:var(--c-danger)">Delete</button>@endcan
+            </div></td>
         </tr>`,
     });
     dt.reload();
@@ -144,9 +143,18 @@ $(function () {
     });
     $('#dt').on('click', '.btn-link', function () {
         const e = dt.getItem($(this).data('id'));
-        const url = publicBase + '/' + e.slug;
-        navigator.clipboard?.writeText(url);
-        window.toast('Public link copied: ' + url, 'success');
+        const url = publicBase + e.slug;
+        const ok = () => window.toast('Public link copied: ' + url, 'success');
+        const fallback = function () {
+            const $t = $('<input readonly style="position:fixed;opacity:0;top:0;left:0">').val(url).appendTo('body');
+            $t[0].focus(); $t[0].select();
+            let done = false;
+            try { done = document.execCommand('copy'); } catch (err) { done = false; }
+            $t.remove();
+            if (done) ok(); else window.toast('Could not copy automatically. Link: ' + url, 'info');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, fallback);
+        else fallback();
     });
     $('#dt').on('click', '.btn-del', function () {
         const id = $(this).data('id'); const btn = this;

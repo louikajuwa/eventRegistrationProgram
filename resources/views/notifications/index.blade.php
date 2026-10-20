@@ -29,13 +29,12 @@
 @push('scripts')
 <script>
 $(function () {
-    const esc = (s) => $('<div>').text(s == null ? '' : s).html();
 
     const dt = new DataTable({
         url: "{{ route('notifications.all') }}", mount: '#dt', perPage: 20,
         row: (n) => `<tr style="${n.read ? '' : 'background:var(--c-accent-50)'}">
-            <td class="col-grow">
-                <a href="${esc(n.url || '#')}" class="font-medium" style="color:var(--text)">${esc(n.title || 'Notification')}</a>
+            <td class="col-grow" style="${n.read ? '' : 'background:var(--c-accent-50)'}">
+                <a href="${esc(safeUrl(n.url))}" class="font-medium" style="color:var(--text)">${esc(n.title || 'Notification')}</a>
                 <div class="text-xs" style="color:var(--text-muted)">${esc(n.message || '')}</div>
             </td>
             <td class="text-xs" style="color:var(--text-muted)">${esc(n.at || '')}</td>

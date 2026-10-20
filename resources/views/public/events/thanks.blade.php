@@ -4,12 +4,16 @@
 @section('content')
 <div class="ticket">
     <div class="ticket-body" style="text-align:center;padding-top:2.25rem">
-        <div style="width:56px;height:56px;border-radius:50%;background:var(--c-success-bg);color:var(--c-success);
+        <div aria-hidden="true" style="width:56px;height:56px;border-radius:50%;background:var(--c-success-bg);color:var(--c-success);
                     display:grid;place-items:center;font-size:1.6rem;margin:0 auto 1rem">✓</div>
         <h1 class="text-xl font-bold">You're registered!</h1>
         <p class="text-sm mt-2" style="color:var(--text-muted)">
-            A confirmation email is on its way to <strong>{{ $registration->email }}</strong>
-            with everything you need for {{ $event->title }}.
+            @if ($registration->email)
+                A confirmation email is on its way to <strong>{{ $registration->email }}</strong>
+                with everything you need for {{ $event->title }}.
+            @else
+                You're all set for {{ $event->title }}. Keep your reference below.
+            @endif
         </p>
         <div style="margin-top:1.25rem;font-family:ui-monospace,monospace;font-size:.85rem;background:var(--c-neutral-50);
                     border:1px dashed var(--c-neutral-300);border-radius:var(--radius-sm);padding:.7rem">
@@ -17,8 +21,8 @@
         </div>
         @if ($event->starts_at || $event->location)
             <div class="text-sm mt-4" style="color:var(--text-muted)">
-                @if ($event->starts_at)📅 {{ $event->starts_at->format('D, d M Y · g:i A') }}<br>@endif
-                @if ($event->location)📍 {{ $event->location }}@endif
+                @if ($event->starts_at)<span aria-hidden="true">📅</span> {{ $event->starts_at->format('D, d M Y · g:i A') }}<br>@endif
+                @if ($event->location)<span aria-hidden="true">📍</span> {{ $event->location }}@endif
             </div>
         @endif
     </div>

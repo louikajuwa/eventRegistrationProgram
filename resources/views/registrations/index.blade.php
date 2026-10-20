@@ -10,19 +10,19 @@
 
 <div class="card fill">
     <div class="card-pad flex flex-wrap items-center gap-3 border-b" style="border-color:var(--border)">
-        <input id="dt-search" class="input" style="max-width:280px" placeholder="Search name, email or reference…">
-        <select id="dt-event" class="select" style="max-width:220px">
+        <input id="dt-search" class="input" style="max-width:280px" placeholder="Search name, email or reference…" aria-label="Search registrations" type="search">
+        <select id="dt-event" class="select" style="max-width:220px" aria-label="Filter by event">
             <option value="">All events</option>
             @foreach ($events as $e)
                 <option value="{{ $e->id }}" @selected(request('event_id') == $e->id)>{{ $e->title }}</option>
             @endforeach
         </select>
-        <select id="dt-attended" class="select" style="max-width:160px">
+        <select id="dt-attended" class="select" style="max-width:160px" aria-label="Filter by attendance">
             <option value="">All attendance</option>
             <option value="1">Attended</option>
             <option value="0">Not attended</option>
         </select>
-        <select id="dt-status" class="select" style="max-width:160px">
+        <select id="dt-status" class="select" style="max-width:160px" aria-label="Filter by status">
             <option value="">All statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -53,8 +53,7 @@
 @push('scripts')
 <script>
 $(function () {
-    const base = "{{ url('registrations') }}";
-    const esc = (s) => $('<div>').text(s == null ? '' : s).html();
+    const base = window.APP.routes.registrations;
 
     const dt = new DataTable({
         url: "{{ route('registrations.index') }}", mount: '#dt', defaultSort: 'id', defaultDir: 'desc',
@@ -64,16 +63,16 @@ $(function () {
                 <div class="text-xs" style="color:var(--text-muted)">${esc(r.email)}</div></td>
             <td>${esc(r.event ? r.event.title : '—')}</td>
             <td class="text-xs" style="font-family:ui-monospace,monospace">${esc(r.reference)}</td>
-            <td>${r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</td>
+            <td>${formatDate(r.created_at)}</td>
             <td>
-                <select class="select status-sel" data-id="${r.id}" style="height:30px;padding:0 .5rem;font-size:.75rem;max-width:120px">
+                <select class="select status-sel" data-id="${r.id}" data-prev="${esc(r.status)}" aria-label="Status for ${esc(r.name)}" style="height:30px;padding:0 .5rem;font-size:.75rem;width:auto;min-width:96px;max-width:120px">
                     <option value="active" ${r.status === 'active' ? 'selected' : ''}>Active</option>
                     <option value="inactive" ${r.status === 'inactive' ? 'selected' : ''}>Inactive</option>
                 </select>
             </td>
-            <td class="text-center"><input type="checkbox" class="att-toggle" data-id="${r.id}" ${r.attended ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--c-accent-600);cursor:pointer"></td>
-            <td class="text-right whitespace-nowrap">
-                @can('registrations.delete')<button class="btn btn-ghost btn-sm btn-del" data-id="${r.id}" style="color:var(--c-danger)">Delete</button>@endcan
+            <td class="text-center"><input type="checkbox" class="att-toggle" data-id="${r.id}" aria-label="Attended: ${esc(r.name)}" ${r.attended ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--c-accent-600);cursor:pointer"></td>
+            <td class="text-right"><div class="row-actions">
+                @can('registrations.delete')<button class="btn btn-ghost btn-sm btn-del" data-id="${r.id}" aria-label="Delete registration for ${esc(r.name)}" style="color:var(--c-danger)">Delete</button>@endcan</div>
             </td>
         </tr>`,
     });
@@ -84,14 +83,25 @@ $(function () {
     dt.reload();
 
     $('#dt').on('change', '.att-toggle', function () {
-        const id = $(this).data('id'); const attended = this.checked ? 1 : 0;
-        window.http({ method: 'PUT', url: base + '/' + id + '/attendance', data: { attended: attended }, quiet: false });
+        const el = this; const id = $(el).data('id'); const attended = el.checked ? 1 : 0;
+        window.http({ method: 'PUT', url: base + '/' + id + '/attendance', data: { attended: attended }, quiet: false })
+            .fail(function () { el.checked = !attended; });
     });
 
     $('#dt').on('change', '.status-sel', function () {
-        const id = $(this).data('id');
-        window.http({ method: 'PUT', url: base + '/' + id + '/status', data: { status: this.value } })
-            .done(() => dt.reload());
+        const el = this; const $el = $(el); const id = $el.data('id');
+        const prev = $el.attr('data-prev'); const next = el.value;
+        const apply = function () {
+            window.http({ method: 'PUT', url: base + '/' + id + '/status', data: { status: next } })
+                .done(() => dt.reload())
+                .fail(function () { el.value = prev; });
+        };
+        if (next === 'inactive') {
+            window.confirmDialog({ title: 'Mark registration inactive?', message: 'This frees the seat for someone else.', confirmText: 'Mark inactive' })
+                .then(function (ok) { if (ok) apply(); else el.value = prev; });
+        } else {
+            apply();
+        }
     });
 
     $('#dt').on('click', '.btn-del', function () {

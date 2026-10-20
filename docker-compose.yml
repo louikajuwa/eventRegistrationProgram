@@ -17,10 +17,18 @@ services:
   app:
     <<: *app
     container_name: events_app
+    restart: unless-stopped
+    healthcheck:
+      # php-fpm listens on 9000; a TCP connect is enough to prove the pool is up.
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   nginx:
     image: nginx:1.27-alpine
     container_name: events_nginx
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -29,13 +37,20 @@ services:
     depends_on:
       - app
       - socket
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks: [events]
 
+  # Dev-only tooling ports (mysql, phpmyadmin, mailpit) are bound to loopback
+  # so they are not reachable from the LAN.
   mysql:
     image: mysql:8.4
     container_name: events_mysql
     ports:
-      - "3309:3306"
+      - "127.0.0.1:3309:3306"
     environment:
       MYSQL_DATABASE: "${DB_DATABASE:-events}"
       MYSQL_USER: "${DB_USERNAME:-events_user}"
@@ -45,7 +60,8 @@ services:
       - events_mysql:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-root_secret}"]
+      # Read the password from the container env instead of baking it into the command line.
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -68,7 +84,7 @@ services:
     image: phpmyadmin:5.2
     container_name: events_phpmyadmin
     ports:
-      - "8081:80"
+      - "127.0.0.1:8081:80"
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
@@ -78,11 +94,11 @@ services:
     networks: [events]
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.30.3
     container_name: events_mailpit
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
     networks: [events]
 
   queue:

@@ -3,7 +3,7 @@
 @section('page-title', 'Registrations')
 
 @section('content')
-<x-page-header title="{{ $event->title }}" subtitle="{{ $organization->name }} · {{ $registrations->count() }} registered · {{ $registrations->where('attended', true)->count() }} attended">
+<x-page-header title="{{ $event->title }}" subtitle="{{ $organization->name }} · {{ $totals['registered'] }} registered · {{ $totals['attended'] }} attended">
     <a class="btn btn-secondary" href="{{ route('admin.organizations.show', $organization->id) }}">Back to {{ $organization->name }}</a>
 </x-page-header>
 
@@ -35,5 +35,8 @@
             </tbody>
         </table>
     </div>
+    @if ($registrations->hasPages())
+        <div class="p-4">{{ $registrations->links() }}</div>
+    @endif
 </div>
 @endsection

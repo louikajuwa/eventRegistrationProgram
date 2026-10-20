@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Enums\QuestionType;
 use App\Enums\RoleName;
 use App\Models\Event;
+use App\Models\EventQuestion;
 use App\Models\Registration;
 use App\Models\User;
 use App\Notifications\NewRegistrationNotification;
 use App\Notifications\RegistrationConfirmedNotification;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -26,51 +29,93 @@ class RegistrationService
      */
     public function submit(Event $event, array $answers): Registration
     {
-        if ($event->isFull()) {
-            throw ValidationException::withMessages([
-                'capacity' => 'This event has reached capacity. Registration is closed.',
-            ]);
-        }
-
         $questions = $event->questions;
         [$name, $email, $phone] = $this->deriveContact($questions, $answers);
 
-        $registration = DB::transaction(function () use ($event, $questions, $answers, $name, $email, $phone): Registration {
-            $registration = Registration::create([
-                'organization_id' => $event->organization_id,
-                'event_id' => $event->id,
-                'name' => $name,
-                'email' => $email,
-                'phone' => $phone,
-                'reference' => $this->uniqueReference(),
-            ]);
-
-            foreach ($questions as $question) {
-                $raw = $answers[$question->id] ?? null;
-                $value = is_array($raw) ? implode(', ', array_filter($raw, fn ($v) => $v !== null && $v !== '')) : $raw;
-
-                $registration->answers()->create([
-                    'organization_id' => $event->organization_id,
-                    'event_question_id' => $question->id,
-                    'question_label' => $question->label,
-                    'value' => $value !== '' ? $value : null,
-                ]);
+        $attempt = 0;
+        while (true) {
+            try {
+                $registration = DB::transaction(
+                    fn (): Registration => $this->createLocked($event, $questions, $answers, $name, $email, $phone)
+                );
+                break;
+            } catch (UniqueConstraintViolationException $e) {
+                // Lost a race: either the same email got in first, or the reference collided.
+                if ($email !== null && Registration::withoutGlobalScopes()->where('event_id', $event->id)->where('email', $email)->exists()) {
+                    throw $this->duplicateEmail();
+                }
+                if (++$attempt >= 3) {
+                    throw $e;
+                }
             }
-
-            return $registration;
-        });
+        }
 
         $this->afterCreated($event, $registration);
 
         return $registration;
     }
 
+    /** Capacity + status + duplicate checks and the insert, serialised per event by a row lock. */
+    private function createLocked(Event $event, $questions, array $answers, string $name, ?string $email, ?string $phone): Registration
+    {
+        $locked = Event::withoutGlobalScopes()->whereKey($event->id)->lockForUpdate()->first();
+        abort_if($locked === null, 404);
+
+        if (! $locked->acceptsRegistrations()) {
+            throw ValidationException::withMessages([
+                'event' => 'Registration is closed for this event.',
+            ]);
+        }
+
+        if ($locked->isFull()) {
+            throw ValidationException::withMessages([
+                'capacity' => 'This event has reached capacity. Registration is closed.',
+            ]);
+        }
+
+        if ($email !== null && Registration::withoutGlobalScopes()->where('event_id', $locked->id)->where('email', $email)->exists()) {
+            throw $this->duplicateEmail();
+        }
+
+        $registration = Registration::create([
+            'organization_id' => $locked->organization_id,
+            'event_id' => $locked->id,
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'reference' => $this->uniqueReference(),
+        ]);
+
+        foreach ($questions as $question) {
+            $raw = $answers[$question->id] ?? null;
+            $value = is_array($raw) ? implode(', ', array_filter($raw, fn ($v) => $v !== null && $v !== '')) : $raw;
+
+            $registration->answers()->create([
+                'organization_id' => $locked->organization_id,
+                'event_question_id' => $question->id,
+                'question_label' => $question->label,
+                'value' => $value !== '' ? $value : null,
+            ]);
+        }
+
+        return $registration;
+    }
+
+    private function duplicateEmail(): ValidationException
+    {
+        return ValidationException::withMessages([
+            'email' => 'This email is already registered for this event.',
+        ]);
+    }
+
     /** Confirmation email to the registrant + admin bell + live dashboard push. */
     private function afterCreated(Event $event, Registration $registration): void
     {
         // Registrant confirmation (routed on-demand — registrants are not User models).
-        Notification::route('mail', $registration->email)
-            ->notify(new RegistrationConfirmedNotification($registration, $event));
+        if ($registration->email !== null) {
+            Notification::route('mail', $registration->email)
+                ->notify(new RegistrationConfirmedNotification($registration, $event));
+        }
 
         // Admin bell for the organization's admins.
         $admins = User::where('organization_id', $event->organization_id)
@@ -86,7 +131,7 @@ class RegistrationService
             'registration.created',
             [
                 'event_id' => $event->id,
-                'registered' => $event->registrations()->count(),
+                'registered' => $event->activeRegistrationsCount(),
                 'name' => $registration->name,
                 'reference' => $registration->reference,
             ],
@@ -97,8 +142,8 @@ class RegistrationService
      * Promote name / email / phone from the mapped answers so they drive the
      * confirmation email, list columns and search.
      *
-     * @param  \Illuminate\Support\Collection<int,\App\Models\EventQuestion>  $questions
-     * @return array{0:string,1:string,2:?string}
+     * @param  Collection<int,EventQuestion>  $questions
+     * @return array{0:string,1:?string,2:?string}
      */
     private function deriveContact($questions, array $answers): array
     {
@@ -133,7 +178,11 @@ class RegistrationService
             }
         }
 
-        return [$name ?: 'Guest', $email ?: '', $phone];
+        if ($email !== null) {
+            $email = mb_strtolower(trim($email));
+        }
+
+        return [$name ?: 'Guest', $email !== null && $email !== '' ? $email : null, $phone];
     }
 
     private function uniqueReference(): string

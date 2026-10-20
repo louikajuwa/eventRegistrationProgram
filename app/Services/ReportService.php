@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Registration;
+use App\Support\SpreadsheetSanitizer as S;
 
 /**
  * Builds report specs: { title, columns[], query, map }. The query is streamed by the
@@ -39,11 +40,11 @@ class ReportService
             'columns' => ['Reference', 'Event', 'Name', 'Email', 'Phone', 'Status', 'Registered', 'Attended', 'Checked In'],
             'query' => $q->latest('id'),
             'map' => fn (Registration $r) => [
-                $r->reference,
-                $r->event?->title,
-                $r->name,
-                $r->email,
-                $r->phone,
+                S::cell($r->reference),
+                S::cell($r->event?->title),
+                S::cell($r->name),
+                S::cell($r->email),
+                S::cell($r->phone),
                 $r->status->label(),
                 (string) $r->created_at?->toDateTimeString(),
                 $r->attended ? 'Yes' : 'No',

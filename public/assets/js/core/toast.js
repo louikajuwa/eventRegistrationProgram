@@ -7,6 +7,8 @@
       root.id = 'toast-root';
       document.body.appendChild(root);
     }
+    root.setAttribute('role', 'status');
+    root.setAttribute('aria-live', 'polite');
     return root;
   }
 

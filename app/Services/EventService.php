@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\QuestionType;
 use App\Models\Event;
-use App\Models\EventQuestion;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -16,9 +16,17 @@ class EventService
 {
     public function create(array $data): Event
     {
-        $data['slug'] = $this->uniqueSlug($data['title']);
+        for ($attempt = 1; ; $attempt++) {
+            $data['slug'] = $this->uniqueSlug($data['title']);
 
-        return Event::create($data)->refresh();
+            try {
+                return Event::create($data)->refresh();
+            } catch (UniqueConstraintViolationException $e) {
+                if ($attempt >= 3) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     public function update(Event $event, array $data): Event

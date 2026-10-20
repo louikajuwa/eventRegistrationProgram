@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Event;
 
 use App\Enums\EventStatus;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,6 +11,11 @@ class StoreEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // Events are tenant-owned; a platform admin (no organization) has nowhere to put one.
+        if ($this->user()?->organization_id === null) {
+            throw new AuthorizationException('Platform administrators cannot create events; sign in as an organization admin.');
+        }
+
         return true;
     }
 

@@ -20,12 +20,13 @@
     </script>
 </head>
 <body class="h-full">
+    <a href="#main" class="skip-link">Skip to content</a>
     <div class="min-h-full flex flex-col items-center justify-center px-4 py-12">
-        <div class="w-full max-w-md">
+        <main id="main" class="w-full max-w-md" tabindex="-1">
             <div class="text-center mb-6">
                 <div class="inline-flex items-center gap-2 text-[color:var(--c-neutral-900)] font-bold text-xl">
-                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white"
-                          style="background: var(--c-accent-600)">🎟</span>
+                    <span aria-hidden="true" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white"
+                          style="background: var(--btn-primary)">🎟</span>
                     {{ config('app.name') }}
                 </div>
             </div>
@@ -35,11 +36,12 @@
             <p class="text-center text-xs mt-6" style="color: var(--text-muted)">
                 &copy; {{ date('Y') }} {{ config('app.name') }}
             </p>
-        </div>
+        </main>
     </div>
 
-    <div id="toast-root"></div>
+    <div id="toast-root" role="status" aria-live="polite"></div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="{{ $asset('assets/js/core/util.js') }}"></script>
     <script src="{{ $asset('assets/js/core/toast.js') }}"></script>
     <script src="{{ $asset('assets/js/core/http.js') }}"></script>
     @stack('scripts')

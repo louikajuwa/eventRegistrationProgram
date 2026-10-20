@@ -17,7 +17,7 @@ class ProfileController extends Controller
     public function update(UpdateProfileRequest $request): JsonResponse|RedirectResponse
     {
         $user = $request->user();
-        $user->update($request->validated());
+        $user->update(collect($request->validated())->except('current_password')->all());
 
         return $request->expectsJson() || $request->ajax()
             ? $this->ok($user->only('name', 'email', 'phone'), 'Profile updated.')

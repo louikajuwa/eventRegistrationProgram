@@ -6,7 +6,7 @@
 <x-page-header title="Overview"
     subtitle="{{ $role === 'super' ? 'Platform-wide activity across all organizations.' : 'Your events and registrations at a glance.' }}" />
 
-<div class="grid gap-4 mb-6" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+<div class="kpi-grid mb-6">
     @foreach ($kpis as $kpi)
         <div class="card stat">
             <div class="stat-label">{{ $kpi['label'] }}</div>

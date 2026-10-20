@@ -8,7 +8,7 @@
 
 <div class="card fill">
     <div class="card-pad flex flex-wrap items-center gap-3 border-b" style="border-color:var(--border)">
-        <input id="dt-search" class="input" style="max-width:320px" placeholder="Search by name, email or slug…">
+        <input id="dt-search" class="input" style="max-width:320px" placeholder="Search by name, email or slug…" aria-label="Search organizations" type="search">
     </div>
 
     <div id="dt" class="table-scroll">
@@ -36,8 +36,7 @@
 @push('scripts')
 <script>
 $(function () {
-    const base = "{{ url('admin/organizations') }}";
-    const esc = (s) => $('<div>').text(s == null ? '' : s).html();
+    const base = window.APP.routes.organizations;
 
     const dt = new DataTable({
         url: "{{ route('admin.organizations.index') }}", mount: '#dt', defaultSort: 'name', defaultDir: 'asc',
@@ -49,10 +48,10 @@ $(function () {
             <td class="num">${o.users_count ?? 0}</td>
             <td class="num">${o.events_count ?? 0}</td>
             <td class="num">${o.registrations_count ?? 0}</td>
-            <td class="text-right whitespace-nowrap">
+            <td class="text-right"><div class="row-actions">
                 <button class="btn btn-ghost btn-sm btn-toggle" data-id="${o.id}" data-active="${o.is_active ? 1 : 0}"
                         style="color:var(${o.is_active ? '--c-danger' : '--c-success'})">${o.is_active ? 'Deactivate' : 'Activate'}</button>
-                <a class="btn btn-ghost btn-sm" href="${base}/${o.id}">View</a>
+                <a class="btn btn-ghost btn-sm" href="${base}/${o.id}">View</a></div>
             </td>
         </tr>`,
     });

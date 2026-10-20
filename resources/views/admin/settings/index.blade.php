@@ -31,28 +31,28 @@
                 {{-- Editor --}}
                 <div>
                     <div class="field">
-                        <span class="field-lab">Subject line</span>
+                        <label class="field-lab" for="s-subject">Subject line</label>
                         <input class="input" id="s-subject" name="default_email_subject"
                                value="{{ $settings['default_email_subject'] ?? '' }}"
                                placeholder="You're registered for {event_title}">
                     </div>
                     <div class="field">
-                        <span class="field-lab">Email body</span>
+                        <label class="field-lab" for="s-body">Email body</label>
                         <textarea class="textarea" id="s-body" name="default_email_body"
                                   style="min-height:200px;font-family:ui-monospace,'Cascadia Code',Consolas,monospace;font-size:.8rem;line-height:1.55"
                                   placeholder="Hi {name}, thanks for registering for {event_title}…">{{ $settings['default_email_body'] ?? '' }}</textarea>
                     </div>
-                    <span class="field-lab">Insert a placeholder</span>
-                    <div class="chips" id="s-chips">
+                    <span class="field-lab" id="s-chips-lab">Insert a placeholder</span>
+                    <div class="chips" id="s-chips" role="group" aria-labelledby="s-chips-lab">
                         @foreach ($placeholders as $ph)
-                            <span class="chip" data-ph="{{ $ph }}">{{ '{'.$ph.'}' }}</span>
+                            <button type="button" class="chip" data-ph="{{ $ph }}">{{ "{".$ph."}" }}</button>
                         @endforeach
                     </div>
                 </div>
                 {{-- Live preview --}}
                 <div>
-                    <span class="field-lab">Preview</span>
-                    <div class="mail-preview" id="s-preview"></div>
+                    <span class="field-lab" id="s-preview-lab">Preview</span>
+                    <div class="mail-preview" id="s-preview" role="region" aria-labelledby="s-preview-lab"></div>
                 </div>
             </div>
         </div>

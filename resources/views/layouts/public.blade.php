@@ -17,7 +17,7 @@
         @media (max-width:560px){ .pub-wrap { padding: 1.25rem 0.9rem 3rem; } }
         .ticket { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg); overflow: hidden; }
-        .ticket-banner { background: linear-gradient(120deg, var(--c-accent-600), var(--c-accent-700));
+        .ticket-banner { background: linear-gradient(120deg, #b93a1e, #9c2f16);
             color: #fff; padding: 1.75rem 1.75rem 1.5rem; }
         @media (max-width:560px){ .ticket-banner { padding: 1.25rem 1.1rem; } }
         .ticket-kicker { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; opacity: .85; font-weight: 600; }
@@ -44,13 +44,15 @@
     </script>
 </head>
 <body class="h-full">
-    <div class="pub-wrap">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="pub-wrap" id="main" tabindex="-1">
         @yield('content')
         <p class="powered">Powered by <strong>{{ config('app.name') }}</strong></p>
     </div>
 
-    <div id="toast-root"></div>
+    <div id="toast-root" role="status" aria-live="polite"></div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="{{ $asset('assets/js/core/util.js') }}"></script>
     <script src="{{ $asset('assets/js/core/toast.js') }}"></script>
     <script src="{{ $asset('assets/js/core/http.js') }}"></script>
     @stack('scripts')

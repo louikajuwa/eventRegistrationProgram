@@ -39,5 +39,8 @@
             </tbody>
         </table>
     </div>
+    @if ($events->hasPages())
+        <div class="p-4">{{ $events->links() }}</div>
+    @endif
 </div>
 @endsection

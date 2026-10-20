@@ -32,7 +32,7 @@ class EmailTemplateRenderer
     {
         return [
             'name' => $registration->name,
-            'email' => $registration->email,
+            'email' => (string) $registration->email,
             'reference' => $registration->reference,
             'event_title' => $event->title,
             'event_date' => $event->starts_at?->format('D, d M Y · g:i A') ?? 'TBD',

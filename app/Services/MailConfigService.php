@@ -17,20 +17,33 @@ use Illuminate\Support\Facades\Schema;
  */
 class MailConfigService
 {
+    private const MAP = [
+        'mail_host' => 'mail.mailers.smtp.host',
+        'mail_port' => 'mail.mailers.smtp.port',
+        'mail_username' => 'mail.mailers.smtp.username',
+        'mail_encryption' => 'mail.mailers.smtp.scheme',
+        'mail_from_address' => 'mail.from.address',
+        'mail_from_name' => 'mail.from.name',
+    ];
+
+    private const PASSWORD_PATH = 'mail.mailers.smtp.password';
+
+    /** @var array<string,mixed>|null Pristine (.env) values of every key we may override. */
+    private static ?array $base = null;
+
     public function applyForOrganization(int $organizationId): void
     {
         if (! $this->settingsTableReady()) {
             return; // migrations not run yet / during install
         }
 
-        $map = [
-            'mail_host' => 'mail.mailers.smtp.host',
-            'mail_port' => 'mail.mailers.smtp.port',
-            'mail_username' => 'mail.mailers.smtp.username',
-            'mail_encryption' => 'mail.mailers.smtp.scheme',
-            'mail_from_address' => 'mail.from.address',
-            'mail_from_name' => 'mail.from.name',
-        ];
+        // Restore the .env defaults first so one org's overrides never leak into the next
+        // job handled by the same worker process.
+        self::$base ??= collect(array_merge(array_values(self::MAP), [self::PASSWORD_PATH]))
+            ->mapWithKeys(fn (string $path) => [$path => config($path)])->all();
+        config(self::$base);
+
+        $map = self::MAP;
 
         $settings = Setting::withoutGlobalScopes()
             ->where('organization_id', $organizationId)
@@ -46,7 +59,14 @@ class MailConfigService
 
         $password = $settings['mail_password'] ?? null;
         if ($password) {
-            config(['mail.mailers.smtp.password' => $this->maybeDecrypt($password)]);
+            config([self::PASSWORD_PATH => $this->maybeDecrypt($password)]);
+        }
+
+        // Mailer instances are cached by the manager; drop them so the new config is used.
+        $manager = app('mail.manager');
+        if (method_exists($manager, 'purge')) {
+            $manager->purge();
+            $manager->purge('smtp');
         }
     }
 

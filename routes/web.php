@@ -27,7 +27,7 @@ Route::get('e/{event:slug}', [PublicEventController::class, 'show'])->name('publ
 Route::post('e/{event:slug}', [PublicRegistrationController::class, 'store'])
     ->middleware('throttle:20,1')->name('public.registrations.store');
 Route::get('e/{event:slug}/thanks/{reference}', [PublicRegistrationController::class, 'thanks'])
-    ->name('public.events.thanks');
+    ->middleware('throttle:30,1')->name('public.events.thanks');
 
 /*
  | Guest routes
@@ -37,10 +37,12 @@ Route::middleware('guest')->group(function (): void {
     Route::post('login', [AuthController::class, 'login'])->name('login.attempt');
 
     Route::get('register', [RegisterController::class, 'showRegister'])->name('register');
-    Route::post('register', [RegisterController::class, 'register'])->name('register.attempt');
+    Route::post('register', [RegisterController::class, 'register'])
+        ->middleware('throttle:5,1')->name('register.attempt');
 
     Route::get('forgot-password', [PasswordController::class, 'showForgot'])->name('password.request');
-    Route::post('forgot-password', [PasswordController::class, 'sendResetLink'])->name('password.email');
+    Route::post('forgot-password', [PasswordController::class, 'sendResetLink'])
+        ->middleware('throttle:5,1')->name('password.email');
     Route::get('reset-password/{token}', [PasswordController::class, 'showReset'])->name('password.reset');
     Route::post('reset-password', [PasswordController::class, 'resetPassword'])->name('password.update');
 });

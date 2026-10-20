@@ -43,8 +43,28 @@ class Event extends Model
         return $query->where('status', EventStatus::Published->value);
     }
 
+    /** Seats taken: only active registrations count (inactive/cancelled free their seat). */
+    public function activeRegistrationsCount(): int
+    {
+        return $this->registrations()->active()->count();
+    }
+
     public function isFull(): bool
     {
-        return $this->capacity !== null && $this->registrations()->count() >= $this->capacity;
+        return $this->capacity !== null && $this->activeRegistrationsCount() >= $this->capacity;
+    }
+
+    /** Ended = ends_at (or starts_at when no end is set) is in the past. */
+    public function hasEnded(): bool
+    {
+        $end = $this->ends_at ?? $this->starts_at;
+
+        return $end !== null && $end->isPast();
+    }
+
+    /** Status allows registration AND the event has not ended. (Capacity is checked separately.) */
+    public function acceptsRegistrations(): bool
+    {
+        return $this->status->acceptsRegistrations() && ! $this->hasEnded();
     }
 }
