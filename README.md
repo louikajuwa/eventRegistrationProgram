@@ -33,3 +33,7 @@ make test
 Tests run in isolation (in-memory SQLite, array drivers), so your MySQL data is never touched.
 
 See [CHANGELOG.md](CHANGELOG.md) for recent changes.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

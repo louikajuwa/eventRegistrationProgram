@@ -2,15 +2,9 @@
 
 ## [Unreleased] - 2026-10-17
 
-### Manual steps after pulling these changes
-- Run `make migrate` (or `docker compose exec app php artisan migrate`). This applies `2026_10_17_100000_make_registration_email_nullable_and_unique_per_event`.
-  - The migration makes `registrations.email` nullable.
-  - It adds a unique index on `(event_id, email)`. The migration fails if duplicate pairs exist; the current data had none.
-  - `down()` restores NOT NULL, writing `''` for null emails.
-- Run `docker compose up -d` to apply the compose changes (port bindings, healthchecks, Mailpit pin).
-- Run `docker compose restart queue scheduler` after deploying code, because workers keep the old code in memory.
-- Run `composer install` (the lockfile changed).
-- MySQL, phpMyAdmin and Mailpit are now reachable only on `127.0.0.1`.
+### Upgrade notes
+
+- Run `make migrate` after upgrading. The new unique `(event_id, email)` index requires that no duplicate pairs exist.
 
 ### Fixed
 - **Capacity overselling.** Status, capacity and duplicate checks now run under a row lock in the same transaction as the insert.
